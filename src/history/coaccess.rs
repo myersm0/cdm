@@ -89,3 +89,73 @@ impl CoAccessGraph {
 			.map(|e| e.score)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn p(s: &str) -> PathBuf {
+		PathBuf::from(s)
+	}
+
+	#[test]
+	fn empty_history() {
+		let graph = CoAccessGraph::build(&[], 3);
+		assert!(graph.edges.is_empty());
+	}
+
+	#[test]
+	fn history_shorter_than_window() {
+		let history = vec![p("/a"), p("/b")];
+		let graph = CoAccessGraph::build(&history, 3);
+		assert!(graph.edges.is_empty());
+	}
+
+	#[test]
+	fn window_size_below_two() {
+		let history = vec![p("/a"), p("/b"), p("/c")];
+		let graph = CoAccessGraph::build(&history, 1);
+		assert!(graph.edges.is_empty());
+	}
+
+	#[test]
+	fn perfect_cooccurrence_gives_npmi_one() {
+		// a and b always appear together, never apart
+		let history = vec![p("/a"), p("/b"), p("/a"), p("/b"), p("/a"), p("/b")];
+		let graph = CoAccessGraph::build(&history, 2);
+		let score = graph.score_for(&p("/a"), &p("/b"));
+		assert!(score.is_some());
+		let s = score.unwrap();
+		assert!((s - 1.0).abs() < 0.01, "expected ~1.0, got {}", s);
+	}
+
+	#[test]
+	fn symmetry() {
+		let history = vec![p("/a"), p("/b"), p("/c"), p("/a"), p("/b")];
+		let graph = CoAccessGraph::build(&history, 2);
+		let ab = graph.score_for(&p("/a"), &p("/b"));
+		let ba = graph.score_for(&p("/b"), &p("/a"));
+		assert_eq!(ab, ba);
+	}
+
+	#[test]
+	fn no_edge_for_independent_paths() {
+		// a only in first half, b only in second half
+		let history = vec![p("/a"), p("/a"), p("/a"), p("/b"), p("/b"), p("/b")];
+		let graph = CoAccessGraph::build(&history, 2);
+		assert!(graph.score_for(&p("/a"), &p("/b")).is_none());
+	}
+
+	#[test]
+	fn neighbors_sorted_descending() {
+		let history = vec![
+			p("/x"), p("/a"), p("/x"), p("/b"), p("/x"), p("/a"),
+			p("/x"), p("/a"), p("/x"), p("/b"),
+		];
+		let graph = CoAccessGraph::build(&history, 2);
+		let neighbors = graph.neighbors_of(&p("/x"));
+		if neighbors.len() >= 2 {
+			assert!(neighbors[0].score >= neighbors[1].score);
+		}
+	}
+}
