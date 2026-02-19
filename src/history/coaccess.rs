@@ -10,7 +10,6 @@ pub struct CoAccessEdge {
 #[derive(Debug, Clone)]
 pub struct CoAccessGraph {
 	pub edges: HashMap<PathBuf, Vec<CoAccessEdge>>,
-	pub window_size: usize,
 }
 
 impl CoAccessGraph {
@@ -18,7 +17,7 @@ impl CoAccessGraph {
 		let mut edges: HashMap<PathBuf, Vec<CoAccessEdge>> = HashMap::new();
 
 		if history.len() < window_size || window_size < 2 {
-			return Self { edges, window_size };
+			return Self { edges };
 		}
 
 		let total_windows = history.len() - window_size + 1;
@@ -52,8 +51,12 @@ impl CoAccessGraph {
 			let p_a = marginal_counts[path_a] as f64 / total_f;
 			let p_b = marginal_counts[path_b] as f64 / total_f;
 
-			let pmi = (p_joint / (p_a * p_b)).ln();
-			let npmi = pmi / -p_joint.ln();
+			let npmi = if (p_joint - 1.0).abs() < f64::EPSILON {
+				1.0
+			} else {
+				let pmi = (p_joint / (p_a * p_b)).ln();
+				pmi / -p_joint.ln()
+			};
 
 			if npmi <= 0.0 {
 				continue;
@@ -75,7 +78,7 @@ impl CoAccessGraph {
 			});
 		}
 
-		Self { edges, window_size }
+		Self { edges }
 	}
 
 	pub fn neighbors_of(&self, path: &PathBuf) -> &[CoAccessEdge] {

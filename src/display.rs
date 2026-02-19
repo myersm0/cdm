@@ -87,7 +87,15 @@ mod tests {
 	}
 
 	#[test]
-	fn truncation_at_max_width() {
+	fn middle_ellipsis_truncation() {
+		let result = format_path(
+			Path::new("/very/long/deeply/nested/path/to/some/dir"),
+			&None,
+			&[],
+			200,
+		);
+		assert_eq!(result, "/very/long/deeply/nested/path/to/some/dir");
+
 		let result = format_path(
 			Path::new("/very/long/deeply/nested/path/to/some/dir"),
 			&None,
@@ -95,7 +103,7 @@ mod tests {
 			20,
 		);
 		assert!(result.len() <= 20, "got len {}: {}", result.len(), result);
-		assert!(result.starts_with('…'));
+		assert!(result.contains('…'));
 	}
 
 	#[test]
