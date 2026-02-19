@@ -50,21 +50,13 @@ For example, if you frequently switch between `~/my_projects/backend` and `~/my_
 
 ## Installation
 
-### Quick install (from source)
-
 ```bash
-git clone https://github.com/myersm0/cdm
-cd cdm
-bash install.sh
+curl -fsSL https://raw.githubusercontent.com/myersm0/cdm/main/install.sh | sh
 ```
 
-This builds the binary and copies it to `~/.local/bin`. It then prints the lines you need to add to your shell profile.
+This detects your platform, downloads the latest precompiled binary, and installs it to `~/.local/bin` with shell functions in `~/.local/share/cdm/`. It then prints the lines to add to your shell profile.
 
-### Precompiled binaries
-
-Download the latest release for your platform from [Releases](https://github.com/myersm0/cdm/releases), extract it, and place the `cdm` binary somewhere on your PATH.
-
-### Shell setup (required either way)
+### Shell setup (required)
 
 Add to your `.bashrc`, `.zshrc`, etc.:
 
