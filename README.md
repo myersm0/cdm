@@ -50,20 +50,30 @@ For example, if you frequently switch between `~/my_projects/backend` and `~/my_
 
 ## Installation
 
+### Quick install (from source)
+
 ```bash
-git clone https://github.com/youruser/cdm
+git clone https://github.com/myersm0/cdm
 cd cdm
-cargo build --release
+bash install.sh
 ```
 
-Add to your `.bashrc` or `.bash_profile`:
+This builds the binary and copies it to `~/.local/bin`. It then prints the lines you need to add to your shell profile.
+
+### Precompiled binaries
+
+Download the latest release for your platform from [Releases](https://github.com/myersm0/cdm/releases), extract it, and place the `cdm` binary somewhere on your PATH.
+
+### Shell setup (required either way)
+
+Add to your `.bashrc`, `.zshrc`, etc.:
 
 ```bash
-export PATH="/path/to/cdm/target/release:$PATH"
+export PATH="$HOME/.local/bin:$PATH"  # if not already there
 source /path/to/cdm/shell/cdm.sh
 ```
 
-The `source` line is essential: it overrides `cd` to record history and defines the wrapper functions that capture cdm's output and actually `cd` into the selected directory.
+The `source` line loads a `cd` override that records history, plus the wrapper functions (`goahead`, `cdr`, `cdf`, `cdp`) that capture cdm's output and actually `cd` into the selected directory.
 
 ## Configuration
 
@@ -76,9 +86,14 @@ coaccess_window = 3
 
 # shorten long paths in the picker display
 [path_aliases]
-proj = "/very/long/corporate/path/projects"
+proj = "/very/long/path/projects"
 data = "/another/long/path/datasets"
 ```
 
 With aliases configured, `/very/long/path/projects/foo` displays as `[proj]/foo`.
 
+## Running tests
+
+```bash
+cargo test
+```
