@@ -74,7 +74,7 @@ pub fn run_picker(items: &[PickerItem], config: &PickerConfig) -> Option<PathBuf
 		).ok();
 	}
 	writeln!(stderr).ok();
-	write!(stderr, " go to: ").ok();
+	write!(stderr, " go to (q to cancel): ").ok();
 	stderr.flush().ok();
 
 	let tty = match std::fs::File::open("/dev/tty") {
