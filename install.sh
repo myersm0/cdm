@@ -1,36 +1,74 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
-bin_dir="${HOME}/.local/bin"
-repo_dir="$(cd "$(dirname "$0")" && pwd)"
+REPO="myersm0/cdm"
+BIN_DIR="${HOME}/.local/bin"
+SHARE_DIR="${HOME}/.local/share/cdm"
 
 info() { printf "\033[0;34m%s\033[0m\n" "$*"; }
 err()  { printf "\033[0;31m%s\033[0m\n" "$*" >&2; exit 1; }
 
+detect_platform() {
+	os="$(uname -s)"
+	arch="$(uname -m)"
+
+	case "$os" in
+		Linux)  os="linux" ;;
+		Darwin) os="macos" ;;
+		*)      err "Unsupported OS: $os" ;;
+	esac
+
+	case "$arch" in
+		x86_64|amd64)  arch="x86_64" ;;
+		arm64|aarch64) arch="aarch64" ;;
+		*)             err "Unsupported architecture: $arch" ;;
+	esac
+
+	echo "cdm-${os}-${arch}"
+}
+
 main() {
-	if [ ! -f "Cargo.toml" ] || ! grep -q 'name = "cdm"' Cargo.toml; then
-		err "Run this from the cdm repo root."
+	artifact="$(detect_platform)"
+	info "Detected platform: ${artifact}"
+
+	url="https://github.com/${REPO}/releases/latest/download/${artifact}.tar.gz"
+	info "Downloading ${url}..."
+
+	tmpdir="$(mktemp -d)"
+	trap 'rm -rf "$tmpdir"' EXIT
+
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL "$url" -o "${tmpdir}/cdm.tar.gz"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -qO "${tmpdir}/cdm.tar.gz" "$url"
+	else
+		err "Neither curl nor wget found."
 	fi
 
-	if ! command -v cargo &>/dev/null; then
-		err "cargo not found. Install Rust from https://rustup.rs or use a precompiled release."
-	fi
+	tar xzf "${tmpdir}/cdm.tar.gz" -C "$tmpdir"
 
-	info "Building cdm..."
-	cargo build --release --quiet
-	mkdir -p "$bin_dir"
-	cp target/release/cdm "$bin_dir/cdm"
-	info "Installed binary to ${bin_dir}/cdm"
+	mkdir -p "$BIN_DIR" "$SHARE_DIR"
+	cp "${tmpdir}/${artifact}" "${BIN_DIR}/cdm"
+	chmod +x "${BIN_DIR}/cdm"
+	info "Installed binary to ${BIN_DIR}/cdm"
+
+	if [ -f "${tmpdir}/shell/cdm.sh" ]; then
+		cp "${tmpdir}/shell/cdm.sh" "${SHARE_DIR}/cdm.sh"
+	elif [ -f "${tmpdir}/cdm.sh" ]; then
+		cp "${tmpdir}/cdm.sh" "${SHARE_DIR}/cdm.sh"
+	fi
+	info "Installed shell functions to ${SHARE_DIR}/cdm.sh"
 
 	echo ""
 	info "Add the following to your shell profile (.bashrc, .zshrc, etc.):"
 	echo ""
-	if ! echo "$PATH" | tr ':' '\n' | grep -qxF "$bin_dir"; then
-		echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-	fi
-	echo "  source \"${repo_dir}/shell/cdm.sh\""
+	case ":$PATH:" in
+		*":${BIN_DIR}:"*) ;;
+		*) echo "  export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
+	esac
+	echo "  source \"\$HOME/.local/share/cdm/cdm.sh\""
 	echo ""
-	info "Then restart your shell or source your profile."
+	info "Then restart your shell."
 	info "Commands available: goahead, cdr, cdf, cdp"
 }
 
