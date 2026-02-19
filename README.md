@@ -1,6 +1,8 @@
 # cdm
 `cd` with memory. Fast filesystem navigation powered by your history.
 
+This is a more robust, more feature-rich successor to my older repo with similar functionality, [bash-productivity](https://github.com/myersm0/bash-productivity), which was in part adapted from the book Pro Bash Programming by Chris F.A. Johnson.
+
 ## Commands
 
 | Command | Description |
