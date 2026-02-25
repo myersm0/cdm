@@ -39,6 +39,7 @@ jobs:
         run: |
           file target/${{ matrix.target }}/release/cdm
           file target/${{ matrix.target }}/release/cdm | grep -q "statically linked"
+          file target/${{ matrix.target }}/release/cdm | grep -q "static"
       - run: |
           cp target/${{ matrix.target }}/release/cdm ${{ matrix.artifact }}
           tar czf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }} shell/cdm.sh
