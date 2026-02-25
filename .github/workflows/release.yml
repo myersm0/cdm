@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             artifact: cdm-linux-x86_64
           - target: x86_64-apple-darwin
@@ -27,7 +27,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - name: Install musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: cargo build --release --target ${{ matrix.target }}
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          RUSTFLAGS: ${{ contains(matrix.target, 'musl') && '-C target-feature=+crt-static' || '' }}
+      - name: Verify static linking
+        if: contains(matrix.target, 'musl')
+        run: |
+          file target/${{ matrix.target }}/release/cdm
+          file target/${{ matrix.target }}/release/cdm | grep -q "statically linked"
       - run: |
           cp target/${{ matrix.target }}/release/cdm ${{ matrix.artifact }}
           tar czf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }} shell/cdm.sh
