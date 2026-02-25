@@ -29,12 +29,12 @@ struct Cli {
 enum Commands {
 	/// List directories ahead of cwd
 	Goahead {
-		/// How many levels deep to search
 		#[arg(short, long, default_value_t = 3)]
 		depth: usize,
-		/// Maximum results to show
 		#[arg(short, long, default_value_t = 15)]
 		number: usize,
+		#[arg(short, long)]
+		regex: Option<String>,
 	},
 	/// Pick from most recently visited directories
 	Cdr {
@@ -174,11 +174,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let config = AppConfig::load();
 
 	match cli.command {
-		Commands::Goahead { depth, number } => {
+		Commands::Goahead { depth, number, regex } => {
 			let cwd = std::fs::canonicalize(".")?;
 			let dirs = list_directories(&cwd, depth).await;
-			let limited: Vec<PathBuf> = dirs.into_iter().take(number).collect();
-
+			let filtered = filter_paths(dirs, &regex, false);
+			let limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
 			if let Some(path) = pick_and_print(&limited, "goahead", &config) {
 				store::append_history(&config.history_path, &path).await.ok();
 			}
