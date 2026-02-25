@@ -112,7 +112,7 @@ fn make_picker_config(title: &str, config: &AppConfig) -> PickerConfig {
 		title: title.to_string(),
 		home_dir: dirs::home_dir(),
 		path_aliases: config.path_aliases(),
-		max_display_width: width.saturating_sub(8),
+		max_display_width: usize::MAX,
 	}
 }
 
