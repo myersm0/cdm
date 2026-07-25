@@ -196,7 +196,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 				.cloned()
 				.collect();
 			let filtered = filter_paths(paths, &regex, prefix);
-			let limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
+			let mut limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
+			limited.reverse();
 
 			if let Some(path) = pick_and_print(&limited, "recent", &config) {
 				store::append_history(&config.history_path, &path).await.ok();
@@ -216,7 +217,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			by_count.sort_by(|a, b| b.1.cmp(&a.1));
 			let paths: Vec<PathBuf> = by_count.into_iter().map(|(p, _)| p).collect();
 			let filtered = filter_paths(paths, &regex, false);
-			let limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
+			let mut limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
+			limited.reverse();
 
 			if let Some(path) = pick_and_print(&limited, "frequent", &config) {
 				store::append_history(&config.history_path, &path).await.ok();
@@ -229,11 +231,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 				.unwrap_or_default();
 			let coaccess = CoAccessGraph::build(&history, config.coaccess_window);
 
-			let paths: Vec<PathBuf> = coaccess.neighbors_of(&cwd)
+			let mut paths: Vec<PathBuf> = coaccess.neighbors_of(&cwd)
 				.iter()
 				.take(number)
 				.map(|edge| edge.neighbor.clone())
 				.collect();
+			paths.reverse();
 
 			if let Some(path) = pick_and_print(&paths, "co-accessed (npmi)", &config) {
 				store::append_history(&config.history_path, &path).await.ok();

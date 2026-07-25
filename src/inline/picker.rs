@@ -68,7 +68,7 @@ pub fn run_picker(items: &[PickerItem], config: &PickerConfig) -> Option<PathBuf
 		writeln!(
 			stderr,
 			" {:>width$}) {}",
-			index + 1,
+			count - index,
 			item.display,
 			width = number_width,
 		).ok();
@@ -107,7 +107,7 @@ pub fn run_picker(items: &[PickerItem], config: &PickerConfig) -> Option<PathBuf
 					break None;
 				}
 				match buf.parse::<usize>() {
-					Ok(n) if n >= 1 && n <= count => break Some(items[n - 1].path.clone()),
+					Ok(n) if n >= 1 && n <= count => break Some(items[count - n].path.clone()),
 					_ => break None,
 				}
 			}
@@ -126,7 +126,7 @@ pub fn run_picker(items: &[PickerItem], config: &PickerConfig) -> Option<PathBuf
 
 				if n * 10 > count {
 					writeln!(stderr).ok();
-					break Some(items[n - 1].path.clone());
+					break Some(items[count - n].path.clone());
 				}
 			}
 			'\x7f' | '\x08' => {
