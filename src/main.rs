@@ -128,9 +128,18 @@ fn make_picker_items(paths: &[PathBuf], picker_config: &PickerConfig) -> Vec<Pic
 		.collect()
 }
 
-fn filter_paths(paths: Vec<PathBuf>, regex: &Option<String>, prefix: bool) -> Vec<PathBuf> {
+fn compile_pattern(pattern: &Option<String>) -> Option<regex::Regex> {
+	pattern.as_ref().map(|text| match regex::Regex::new(text) {
+		Ok(compiled) => compiled,
+		Err(error) => {
+			eprintln!("invalid pattern: {}", error);
+			std::process::exit(2);
+		}
+	})
+}
+
+fn filter_paths(paths: Vec<PathBuf>, regex: &Option<regex::Regex>, prefix: bool) -> Vec<PathBuf> {
 	let cwd = std::env::current_dir().ok();
-	let regex = regex.as_ref().and_then(|r| regex::Regex::new(r).ok());
 
 	paths
 		.into_iter()
@@ -173,8 +182,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	match cli.command {
 		Commands::Goahead { depth, number, regex } => {
 			let cwd = std::fs::canonicalize(".")?;
+			let compiled_regex = compile_pattern(&regex);
 			let dirs = list_directories(&cwd, depth).await;
-			let filtered = filter_paths(dirs, &regex, false);
+			let filtered = filter_paths(dirs, &compiled_regex, false);
 			let limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
 			if let Some(path) = pick_and_print(&limited, "goahead", &config) {
 				store::append_history(&config.history_path, &path).await.ok();
@@ -192,7 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 				.filter(|p| seen.insert((*p).clone()))
 				.cloned()
 				.collect();
-			let filtered = filter_paths(paths, &regex, prefix);
+			let filtered = filter_paths(paths, &compile_pattern(&regex), prefix);
 			let mut limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
 			limited.reverse();
 
@@ -213,7 +223,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			let mut by_count: Vec<(PathBuf, usize)> = counts.into_iter().collect();
 			by_count.sort_by(|a, b| b.1.cmp(&a.1));
 			let paths: Vec<PathBuf> = by_count.into_iter().map(|(p, _)| p).collect();
-			let filtered = filter_paths(paths, &regex, false);
+			let filtered = filter_paths(paths, &compile_pattern(&regex), false);
 			let mut limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
 			limited.reverse();
 
