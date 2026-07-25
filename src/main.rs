@@ -45,8 +45,8 @@ enum Commands {
 		#[arg(short, long, default_value_t = 15)]
 		number: usize,
 		/// Only show directories under cwd
-		#[arg(short, long)]
-		prefix: bool,
+		#[arg(short = 'c', long = "current", short_alias = 'p', alias = "prefix")]
+		current: bool,
 		/// Only consider the N most recent history entries
 		#[arg(short = 'H', long, default_value_t = 500)]
 		history_depth: usize,
@@ -138,7 +138,7 @@ fn compile_pattern(pattern: &Option<String>) -> Option<regex::Regex> {
 	})
 }
 
-fn filter_paths(paths: Vec<PathBuf>, regex: &Option<regex::Regex>, prefix: bool) -> Vec<PathBuf> {
+fn filter_paths(paths: Vec<PathBuf>, regex: &Option<regex::Regex>, current_directory_only: bool) -> Vec<PathBuf> {
 	let cwd = std::env::current_dir().ok();
 
 	paths
@@ -149,7 +149,7 @@ fn filter_paths(paths: Vec<PathBuf>, regex: &Option<regex::Regex>, prefix: bool)
 					return false;
 				}
 			}
-			if prefix {
+			if current_directory_only {
 				if let Some(ref cwd) = cwd {
 					if !path.starts_with(cwd) {
 						return false;
@@ -190,7 +190,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 				store::append_history(&config.history_path, &path).await.ok();
 			}
 		}
-		Commands::Cdr { regex, number, prefix, history_depth } => {
+		Commands::Cdr { regex, number, current, history_depth } => {
 			let history = store::load_history(&config.history_path)
 				.await
 				.unwrap_or_default();
@@ -202,7 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 				.filter(|p| seen.insert((*p).clone()))
 				.cloned()
 				.collect();
-			let filtered = filter_paths(paths, &compile_pattern(&regex), prefix);
+			let filtered = filter_paths(paths, &compile_pattern(&regex), current);
 			let mut limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
 			limited.reverse();
 
