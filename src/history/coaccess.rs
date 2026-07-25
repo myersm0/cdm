@@ -85,6 +85,7 @@ impl CoAccessGraph {
 		self.edges.get(path).map(|v| v.as_slice()).unwrap_or(&[])
 	}
 
+	#[allow(dead_code)]
 	pub fn score_for(&self, from: &PathBuf, to: &PathBuf) -> Option<f64> {
 		self.neighbors_of(from)
 			.iter()

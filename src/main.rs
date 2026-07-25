@@ -71,7 +71,7 @@ enum Commands {
 	},
 }
 
-async fn list_directories(root: &PathBuf, max_depth: usize) -> Vec<PathBuf> {
+fn list_directories(root: &PathBuf, max_depth: usize) -> Vec<PathBuf> {
 	let mut result = Vec::new();
 	let mut queue: VecDeque<(PathBuf, usize)> = VecDeque::new();
 	queue.push_back((root.clone(), 0));
@@ -80,14 +80,14 @@ async fn list_directories(root: &PathBuf, max_depth: usize) -> Vec<PathBuf> {
 		if depth >= max_depth {
 			continue;
 		}
-		let mut reader = match tokio::fs::read_dir(&dir).await {
+		let reader = match std::fs::read_dir(&dir) {
 			Ok(r) => r,
 			Err(_) => continue,
 		};
 		let mut children = Vec::new();
-		while let Ok(Some(entry)) = reader.next_entry().await {
+		for entry in reader.flatten() {
 			let path = entry.path();
-			if entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false) {
+			if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
 				children.push(path);
 			}
 		}
@@ -174,8 +174,7 @@ fn pick_and_print(paths: &[PathBuf], title: &str, config: &AppConfig) -> Option<
 	Some(selected)
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let cli = Cli::parse();
 	let config = AppConfig::load();
 
@@ -183,16 +182,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 		Commands::Goahead { depth, number, regex } => {
 			let cwd = std::fs::canonicalize(".")?;
 			let compiled_regex = compile_pattern(&regex);
-			let dirs = list_directories(&cwd, depth).await;
+			let dirs = list_directories(&cwd, depth);
 			let filtered = filter_paths(dirs, &compiled_regex, false);
 			let limited: Vec<PathBuf> = filtered.into_iter().take(number).collect();
 			if let Some(path) = pick_and_print(&limited, "goahead", &config) {
-				store::append_history(&config.history_path, &path).await.ok();
+				store::append_history(&config.history_path, &path).ok();
 			}
 		}
 		Commands::Cdr { regex, number, current, history_depth } => {
 			let history = store::load_history(&config.history_path)
-				.await
 				.unwrap_or_default();
 			let recent = tail(&history, history_depth);
 
@@ -207,12 +205,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			limited.reverse();
 
 			if let Some(path) = pick_and_print(&limited, "recent", &config) {
-				store::append_history(&config.history_path, &path).await.ok();
+				store::append_history(&config.history_path, &path).ok();
 			}
 		}
 		Commands::Cdf { regex, number, history_depth } => {
 			let history = store::load_history(&config.history_path)
-				.await
 				.unwrap_or_default();
 			let recent = tail(&history, history_depth);
 
@@ -228,13 +225,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			limited.reverse();
 
 			if let Some(path) = pick_and_print(&limited, "frequent", &config) {
-				store::append_history(&config.history_path, &path).await.ok();
+				store::append_history(&config.history_path, &path).ok();
 			}
 		}
 		Commands::Cdp { number } => {
 			let cwd = std::fs::canonicalize(".")?;
 			let history = store::load_history(&config.history_path)
-				.await
 				.unwrap_or_default();
 			let coaccess = CoAccessGraph::build(&history, config.coaccess_window);
 
@@ -246,7 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 			paths.reverse();
 
 			if let Some(path) = pick_and_print(&paths, "co-accessed (npmi)", &config) {
-				store::append_history(&config.history_path, &path).await.ok();
+				store::append_history(&config.history_path, &path).ok();
 			}
 		}
 	}
