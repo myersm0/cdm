@@ -104,15 +104,12 @@ async fn list_directories(root: &PathBuf, max_depth: usize) -> Vec<PathBuf> {
 }
 
 fn make_picker_config(title: &str, config: &AppConfig) -> PickerConfig {
-	let width = std::env::var("COLUMNS")
-		.ok()
-		.and_then(|s| s.parse::<usize>().ok())
-		.unwrap_or(80);
+	let width = picker::terminal_width();
 	PickerConfig {
 		title: title.to_string(),
 		home_dir: dirs::home_dir(),
 		path_aliases: config.path_aliases(),
-		max_display_width: usize::MAX,
+		max_display_width: width.saturating_sub(6).max(20),
 	}
 }
 

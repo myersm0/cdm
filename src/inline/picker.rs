@@ -27,6 +27,20 @@ impl Default for PickerConfig {
 	}
 }
 
+pub fn terminal_width() -> usize {
+	if let Ok(tty) = std::fs::File::open("/dev/tty") {
+		let mut window_size: libc::winsize = unsafe { std::mem::zeroed() };
+		let result = unsafe { libc::ioctl(tty.as_raw_fd(), libc::TIOCGWINSZ, &mut window_size) };
+		if result == 0 && window_size.ws_col > 0 {
+			return window_size.ws_col as usize;
+		}
+	}
+	std::env::var("COLUMNS")
+		.ok()
+		.and_then(|value| value.parse::<usize>().ok())
+		.unwrap_or(80)
+}
+
 fn set_raw_mode(fd: i32) -> Option<libc::termios> {
 	unsafe {
 		let mut orig: libc::termios = std::mem::zeroed();

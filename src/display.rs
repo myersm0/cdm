@@ -6,6 +6,8 @@ pub fn format_path(
 	aliases: &[(PathBuf, String)],
 	max_width: usize,
 ) -> String {
+	use unicode_width::UnicodeWidthStr;
+
 	let mut display = path.to_string_lossy().to_string();
 	let mut alias_matched = false;
 
@@ -25,22 +27,42 @@ pub fn format_path(
 		}
 	}
 
-	if display.len() > max_width {
+	if UnicodeWidthStr::width(display.as_str()) > max_width {
 		let components: Vec<&str> = display.split('/').collect();
 		if components.len() > 3 {
 			let first = components[0];
 			let last_two = &components[components.len() - 2..];
 			let truncated = format!("{}/…/{}", first, last_two.join("/"));
-			if truncated.len() < display.len() {
+			if UnicodeWidthStr::width(truncated.as_str()) < UnicodeWidthStr::width(display.as_str()) {
 				display = truncated;
 			}
 		}
-		if display.len() > max_width {
-			display = format!("…{}", &display[display.len() - max_width + 1..]);
+		if UnicodeWidthStr::width(display.as_str()) > max_width {
+			display = truncate_keep_tail(&display, max_width);
 		}
 	}
 
 	display
+}
+
+fn truncate_keep_tail(text: &str, max_width: usize) -> String {
+	use std::collections::VecDeque;
+	use unicode_width::UnicodeWidthChar;
+
+	if max_width <= 1 {
+		return "…".to_string();
+	}
+	let mut kept: VecDeque<char> = VecDeque::new();
+	let mut used_width = 0;
+	for character in text.chars().rev() {
+		let character_width = UnicodeWidthChar::width(character).unwrap_or(0);
+		if used_width + character_width > max_width - 1 {
+			break;
+		}
+		kept.push_front(character);
+		used_width += character_width;
+	}
+	format!("…{}", kept.into_iter().collect::<String>())
 }
 
 #[cfg(test)]
@@ -104,6 +126,20 @@ mod tests {
 		);
 		assert!(result.len() <= 20, "got len {}: {}", result.len(), result);
 		assert!(result.contains('…'));
+	}
+
+	#[test]
+	fn truncation_multibyte_no_panic() {
+		let path_text = format!("/données/{}/café", "é".repeat(60));
+		let result = format_path(Path::new(&path_text), &None, &[], 20);
+		assert!(unicode_width::UnicodeWidthStr::width(result.as_str()) <= 20);
+		assert!(result.starts_with('…'));
+	}
+
+	#[test]
+	fn truncation_wide_characters() {
+		let result = format_path(Path::new("/日本/語/の/深い/パス/名前"), &None, &[], 10);
+		assert!(unicode_width::UnicodeWidthStr::width(result.as_str()) <= 10);
 	}
 
 	#[test]
